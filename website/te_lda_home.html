@@ -1,0 +1,158 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>
+    <link rel="stylesheet" type="text/css" href="te_lda.css"/>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script type="text/javascript" src="te_graph.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+
+	    $(document).ajaxStart(function () {
+        	$("#loading").show();
+            }).ajaxStop(function () {
+	    $("#loading").hide();
+    	    });
+
+            $("#submit").click(function(e) {
+                e.preventDefault();
+		$("#interactivemap").html("");
+
+
+                var tel_text = $("#transliterateTextarea").val()
+
+		if(tel_text) {
+
+			var data_dict = {telugu_data: tel_text}
+
+	                $.ajax({
+        	            type: "POST",
+                	    url: 'https://gvpuj10a78.execute-api.us-east-1.amazonaws.com/lambda_invoke_beta/helloworld',
+	                    contentType: 'application/json',
+        	            //data: 'telugu_data=' + tel_text, // This is for GET
+        	            data: JSON.stringify(data_dict),
+                	    success: function(res){
+			
+				var i;
+				var best = -1, bestval = -1;
+				for (i = 0; i < 15; i++) {
+					if(bestval < res["topic_distribution"][i]){
+						bestval = res["topic_distribution"][i]
+						best = i
+					}
+				}
+ 
+                	        $('#form-response').text(res["topic_names"][best]);
+
+				//set dimensions
+				var cHeight = 600, cWidth = 750;
+				// Set the canvas
+				var svg = d3.select('#interactivemap').append("svg").attr('width', cWidth).attr('height', cHeight);
+				renderBarChart(svg, res);
+	                    },
+        	            error: function(){
+                	        $('#form-response').text('Error.');
+                    		}
+                	});
+		}
+		else{
+			$('#form-response').text("Please enter some text.");
+		}
+
+            })
+
+        });
+    </script>
+
+    <script type="text/javascript">
+      // Load the Google Transliterate API
+      google.load("elements", "1", {
+            packages: "transliteration"
+          });
+
+      function onLoad() {
+        var options = {
+            sourceLanguage:
+                google.elements.transliteration.LanguageCode.ENGLISH,
+            destinationLanguage:
+                [google.elements.transliteration.LanguageCode.TELUGU],
+            shortcutKey: 'ctrl+g',
+            transliterationEnabled: true
+        };
+
+        // Create an instance on TransliterationControl with the required
+        // options.
+        var control =
+            new google.elements.transliteration.TransliterationControl(options);
+
+        // Enable transliteration in the textbox with id
+        // 'transliterateTextarea'.
+        control.makeTransliteratable(['transliterateTextarea']);
+      }
+
+      google.setOnLoadCallback(onLoad);
+
+	function myFunction() {
+	  var x = document.getElementById("myTopnav");
+	  if (x.className === "topnav") {
+	    x.className += " responsive";
+	  } else {
+	    x.className = "topnav";
+  		}
+	}
+
+    </script>
+  </head>
+  <body>
+	 <div class="topnav" id="myTopnav">
+	  <a id="#te_image" class="image"><img height="49px" style="padding:" src="https://nirupampubshare.s3.amazonaws.com/telugu_word_2.png"/></a>
+	  <a id="#about" href="https://medium.com/@nirupampratap/deploying-lda-gensim-topic-models-over-aws-lambda-cce0f9791b64" target="_blank">AWS Lambda Enablement</a>
+	  <a id="#howto" href="https://medium.com/@nirupampratap/topic-modeling-using-lda-on-telugu-%E0%B0%A4%E0%B1%86%E0%B0%B2%E0%B1%81%E0%B0%97%E0%B1%81-articles-a31e367ca229" target="_blank">
+		Model Details</a>
+	  <a class="active" href="#home">Home</a>
+	  <a href="javascript:void(0);" class="icon" onclick="myFunction()">
+	    <i class="fa fa-bars"></i>
+	  </a>
+	</div>
+<div class="row" style="margin-bottom: 10px">
+  <div class="singlecolumn">
+    <div class="singlerowcard">
+	<div style="width:100%;align:center">
+	  <h2>Applying Topic Modeling (LDA) to Indic Languages (Telugu)</h2>
+	</div>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="column">
+    <div class="card">
+	<div style="width:100%;text-align:left">
+	  <h4 style="margin-top:7px;margin-bottom:7px">Type below (Transliterated) / Paste Telugu text</h2>
+	</div>
+    	<textarea id="transliterateTextarea" style="width:100%;height:200px;margin-bottom:10px;border:none;color:gray;font-size:20px;"></textarea>
+	<button id="submit" class="btn default">Identify topics in the document</button>
+	<div id="finalresponse" style="margin-top:10px;margin-bottom:15px;align:center">
+		<div style="float:left;font-size:20px;margin-right:5px">Dominant Topic: </div>
+		<div id="form-response" style="float:left;padding-top:3px"></div>
+	</div>
+    </div>
+  </div>
+
+  <div class="column">
+    <div class="card">
+	<div style="width:100%;text-align:left;margin-bottom:0px;padding:0px">
+	  <h4 style="margin-top:7px;margin-bottom:7px">Topic Distribution</h2>
+	</div>
+	<div id="loading" style="display:none"> <img src="https://loading.io/spinners/bricks/index.block-rotate-loading-gif.gif" /> </div>
+	<div id="interactivemap">
+	</div>
+    </div>
+  </div>
+</div>
+
+  </body>
+<html> 
